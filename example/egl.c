@@ -14,6 +14,9 @@
 
 #include <GLES2/gl2.h>
 
+#define VERTEX_ATTR_POSITION 0
+#define M_PI 3.141592653589793238462643383279502884197169f
+
 GLfloat fov_loc;
 GLfloat view_width_loc;
 GLfloat view_height_loc;
@@ -22,10 +25,7 @@ GLfloat view_angle_lon_loc;
 
 float fov = 90.0f;
 float angle_lat = 0.0f;
-float angle_lon = 0.0f;
-
-#define VERTEX_ATTR_POSITION 0
-#define M_PI 3.141592653589793238462643383279502884197169f
+float angle_lon = M_PI / 2.0f;
 
 #if defined(GLOBOX_PLATFORM_WINDOWS)
 PFNGLATTACHSHADERPROC glAttachShader;
@@ -412,8 +412,8 @@ int main(void)
 	glUniform1i(tex_loc, 0);
 	glUniform1f(tex_width_loc, ihdr.width);
 	glUniform1f(tex_height_loc, ihdr.height);
-	glUniform1f(view_angle_lat_loc, 0.0f);
-	glUniform1f(view_angle_lon_loc, 0.0f);
+	glUniform1f(view_angle_lat_loc, angle_lat);
+	glUniform1f(view_angle_lon_loc, angle_lon);
 
 	// continue initializing globox
 	globox_platform_commit(&globox);

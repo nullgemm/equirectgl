@@ -1,0 +1,83 @@
+.POSIX:
+NAME = example_wayland_egl
+CMD = ./example_wayland_egl
+CC = gcc
+
+
+LDLIBS+= -lwayland-cursor
+LDLIBS+= -lxkbcommon
+LDLIBS+= -lwayland-egl
+LDLIBS+= -lwayland-client
+LDLIBS+= -lEGL
+LDLIBS+= -lGLESv2
+LDLIBS+= -lrt
+LDLIBS+= -lm
+LDLIBS+= -lz
+
+CFLAGS+= -std=c99
+CFLAGS+= -pedantic
+CFLAGS+= -Wall
+CFLAGS+= -Wextra
+CFLAGS+= -Werror=vla
+CFLAGS+= -Werror
+CFLAGS+= -Wno-address-of-packed-member
+CFLAGS+= -Wno-unused-parameter
+CFLAGS+= -Ires/wayland_headers
+CFLAGS+= -Ires/globox/include
+CFLAGS+= -Ires/willis/src
+CFLAGS+= -Ires/libspng/spng
+
+CFLAGS+= -DGLOBOX_PLATFORM_WAYLAND
+CFLAGS+= -DWILLIS_WAYLAND
+CFLAGS+= -DWILLIS_DEBUG
+CFLAGS+= -DGLOBOX_CONTEXT_EGL
+
+OBJ+= res/willis/src/willis.o
+OBJ+= res/willis/src/debug.o
+OBJ+= res/willis/src/wayland.o
+OBJ+= res/willis/src/xkb.o
+OBJ+= res/libspng/spng/spng.o
+OBJ+= example/egl.o
+
+OBJ_EXTRA+= res/globox/lib/globox/wayland/globox_wayland_egl.a
+
+VALGRIND+= --show-error-list=yes
+VALGRIND+= --show-leak-kinds=all
+VALGRIND+= --track-origins=yes
+VALGRIND+= --leak-check=full
+VALGRIND+= --suppressions=../res/valgrind.supp
+
+default: res/globox res/wayland_headers bin/$(NAME)
+
+bin/$(NAME): $(OBJ) $(OBJ_EXTRA)
+	mkdir -p $(@D)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+res/globox:
+	make/scripts/globox_get.sh
+
+res/wayland_headers:
+	make/scripts/wayland_get.sh
+
+leak: bin/$(NAME)
+	cd bin && valgrind $(VALGRIND) 2> ../valgrind.log $(CMD)
+	less valgrind.log
+
+run: bin/$(NAME)
+	cd bin && $(CMD)
+
+willis.o: res/willis/src/willis.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h
+debug.o: res/willis/src/debug.c
+wayland.o: res/willis/src/wayland.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h res/willis/src/willis_wayland.h \
+ zwp-pointer-constraints-protocol.h zwp-relative-pointer-protocol.h \
+ res/willis/src/willis_xkb.h res/willis/src/xkb.h
+xkb.o: res/willis/src/xkb.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h res/willis/src/willis_xkb.h \
+ res/willis/src/xkb.h
+spng.o: res/libspng/spng/spng.c res/libspng/spng/spng.h
+egl.o: example/egl.c globox.h globox_private_getters.h willis.h spng.h
+
+clean:
+	make/scripts/clean.sh

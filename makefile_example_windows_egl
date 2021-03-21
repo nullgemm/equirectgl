@@ -1,0 +1,84 @@
+.POSIX:
+NAME = example_windows_egl
+CMD = ../make/scripts/dll_copy.sh globox_windows_egl_mingw.dll && wine ./example_windows_egl
+CC = x86_64-w64-mingw32-gcc
+
+LDFLAGS+= -fno-stack-protector
+LDFLAGS+= -Lres/eglproxy/lib/mingw
+
+LDLIBS+= -lgdi32
+LDLIBS+= -ldwmapi
+LDLIBS+= -lshcore
+LDLIBS+= -mwindows
+LDLIBS+= -lm
+LDLIBS+= -lz
+LDLIBS+= -leglproxy
+LDLIBS+= -lopengl32
+
+CFLAGS+= -std=c99
+CFLAGS+= -pedantic
+CFLAGS+= -Wall
+CFLAGS+= -Wextra
+CFLAGS+= -Werror=vla
+CFLAGS+= -Werror
+CFLAGS+= -Wno-address-of-packed-member
+CFLAGS+= -Wno-unused-parameter
+CFLAGS+= -Wno-implicit-fallthrough
+CFLAGS+= -Wno-cast-function-type
+CFLAGS+= -Wno-incompatible-pointer-types
+CFLAGS+= -Ires/globox/include
+CFLAGS+= -Ires/willis/src
+CFLAGS+= -Ires/libspng/spng
+CFLAGS+= -Ires/egl_headers
+
+CFLAGS+= -DGLOBOX_PLATFORM_WINDOWS
+CFLAGS+= -DWILLIS_WINDOWS
+CFLAGS+= -DWILLIS_DEBUG
+CFLAGS+= -DUNICODE
+CFLAGS+= -D_UNICODE
+CFLAGS+= -DWINVER=0x0A00
+CFLAGS+= -D_WIN32_WINNT=0x0A00
+CFLAGS+= -DCINTERFACE
+CFLAGS+= -DCOBJMACROS
+CFLAGS+= -DGLOBOX_CONTEXT_EGL
+
+OBJ+= res/willis/src/willis.o
+OBJ+= res/willis/src/debug.o
+OBJ+= res/willis/src/windows.o
+OBJ+= res/libspng/spng/spng.o
+OBJ+= example/egl.o
+
+OBJ_EXTRA+= res/globox/lib/globox/windows/globox_windows_egl_mingw.a
+
+default: res/egl_headers bin/eglproxy.dll res/globox bin/$(NAME)
+
+bin/$(NAME): $(OBJ) $(OBJ_EXTRA)
+	mkdir -p $(@D)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+bin/eglproxy.dll: res/eglproxy
+	mkdir -p $(@D)
+	cp res/eglproxy/lib/mingw/eglproxy.dll $@
+
+res/eglproxy:
+	make/scripts/eglproxy_get.sh
+
+res/egl_headers:
+	make/scripts/egl_get.sh
+
+res/globox:
+	make/scripts/globox_get.sh
+
+run: bin/$(NAME)
+	cd bin && $(CMD)
+
+willis.o: res/willis/src/willis.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h
+debug.o: res/willis/src/debug.c
+windows.o: res/willis/src/windows.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h
+spng.o: res/libspng/spng/spng.c res/libspng/spng/spng.h
+egl.o: example/egl.c globox.h globox_private_getters.h willis.h spng.h
+
+clean:
+	make/scripts/clean.sh

@@ -1,0 +1,81 @@
+.POSIX:
+NAME = example_macos_egl_native
+CMD = ./example_macos_egl_native
+OBJCOPY = /usr/local/Cellar/binutils/*/bin/objcopy
+CC = clang
+
+LDFLAGS+= -Lres/angle/libs
+
+LDLIBS+= -framework
+LDLIBS+= AppKit
+LDLIBS+= -lm
+LDLIBS+= -lz
+LDLIBS+= -lEGL
+LDLIBS+= -lGLESv2
+
+CFLAGS+= -std=c99
+CFLAGS+= -pedantic
+CFLAGS+= -Wall
+CFLAGS+= -Wextra
+CFLAGS+= -Werror=vla
+CFLAGS+= -Werror
+CFLAGS+= -Wno-address-of-packed-member
+CFLAGS+= -Wno-unused-parameter
+CFLAGS+= -Wno-unguarded-availability-new
+CFLAGS+= -Ires/globox/include
+CFLAGS+= -Ires/willis/src
+CFLAGS+= -Ires/libspng/spng
+CFLAGS+= -Ires/angle/include
+
+CFLAGS+= -DGLOBOX_PLATFORM_MACOS
+CFLAGS+= -DWILLIS_MACOS
+CFLAGS+= -DWILLIS_DEBUG
+CFLAGS+= -DGLOBOX_CONTEXT_EGL
+
+OBJ+= res/willis/src/willis.o
+OBJ+= res/willis/src/debug.o
+OBJ+= res/willis/src/macos.o
+OBJ+= res/libspng/spng/spng.o
+OBJ+= example/egl.o
+
+OBJ_EXTRA+= res/globox/lib/globox/macos/globox_macos_egl_native.a
+
+VALGRIND+= --show-error-list=yes
+VALGRIND+= --show-leak-kinds=all
+VALGRIND+= --track-origins=yes
+VALGRIND+= --leak-check=full
+VALGRIND+= --suppressions=../res/valgrind.supp
+
+default: res/angle/libs bin/libEGL.dylib res/globox bin/$(NAME).app
+
+bin/$(NAME).app: bin/$(NAME)
+	mv bin/$(NAME) $@
+
+bin/$(NAME): $(OBJ) $(OBJ_EXTRA)
+	mkdir -p $(@D)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+bin/libEGL.dylib: res/angle/libs
+	cp res/angle/libs/*.dylib bin/
+
+res/angle/libs:
+	mkdir -p bin
+	make/scripts/angle_dev_get.sh
+
+res/globox:
+	make/scripts/globox_get.sh
+
+run: bin/$(NAME)
+	cd bin && $(CMD)
+
+willis.o: res/willis/src/willis.c res/willis/src/willis.h \
+  res/willis/src/willis_events.h
+debug.o: res/willis/src/debug.c
+macos.o: res/willis/src/macos.c res/willis/src/willis.h \
+  res/willis/src/willis_events.h res/willis/src/willis_macos.h
+spng.o: res/libspng/spng/spng.c res/libspng/spng/spng.h
+egl.o: example/egl.c globox.h globox_private_getters.h willis.h spng.h \
+  GLES2/gl2.h
+
+clean:
+	make/scripts/clean.sh

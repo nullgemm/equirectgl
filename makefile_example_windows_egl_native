@@ -1,0 +1,97 @@
+.POSIX:
+NAME = example_windows_egl_native
+CMD = ./example_windows_egl_native.exe
+CC = "/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/cl.exe"
+LIB = "/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.28.29333/bin/Hostx64/x64/lib.exe"
+
+LDFLAGS+= -SUBSYSTEM:windows
+LDFLAGS+= -LIBPATH:"/c/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/um/x64"
+LDFLAGS+= -LIBPATH:"/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.28.29333/lib/spectre/x64"
+LDFLAGS+= -LIBPATH:"/c/Program Files (x86)/Windows Kits/10/Lib/10.0.19041.0/ucrt/x64"
+LDFLAGS+= -LIBPATH:res/eglproxy/lib/msvc
+LDFLAGS+= -LIBPATH:"res/globox/lib/globox/windows"
+
+LDLIBS+= Gdi32.lib
+LDLIBS+= User32.lib
+LDLIBS+= shcore.lib
+LDLIBS+= dwmapi.lib
+LDLIBS+= eglproxy.lib
+LDLIBS+= opengl32.lib
+LDLIBS+= globox_windows_egl_msvc.lib
+
+CFLAGS+= -Zc:inline
+CFLAGS+= -Ires/globox/include
+CFLAGS+= -Ires/willis/src
+CFLAGS+= -Ires/cursoryx/src
+CFLAGS+= -Ires/dpishit/src
+CFLAGS+= -Ires/libspng/spng
+CFLAGS+= -I"/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/ucrt"
+CFLAGS+= -I"/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/um"
+CFLAGS+= -I"/c/Program Files (x86)/Windows Kits/10/Include/10.0.19041.0/shared"
+CFLAGS+= -I"/c/Program Files (x86)/Microsoft Visual Studio/2019/BuildTools/VC/Tools/MSVC/14.28.29333/include"
+CFLAGS+= -Ires/egl_headers
+
+CFLAGS+= -DGLOBOX_PLATFORM_WINDOWS
+CFLAGS+= -DWILLIS_WINDOWS
+CFLAGS+= -DWILLIS_DEBUG
+CFLAGS+= -DUNICODE
+CFLAGS+= -D_UNICODE
+CFLAGS+= -DWINVER=0x0A00
+CFLAGS+= -D_WIN32_WINNT=0x0A00
+CFLAGS+= -DCINTERFACE
+CFLAGS+= -DCOBJMACROS
+CFLAGS+= -DGLOBOX_CONTEXT_EGL
+
+OBJ+= res/willis/src/willis.obj
+OBJ+= res/willis/src/debug.obj
+OBJ+= res/willis/src/windows.obj
+OBJ+= res/libspng/spng/spng.obj
+OBJ+= example/egl.obj
+
+
+DRMEMORY+= -report_max
+DRMEMORY+= -1
+DRMEMORY+= -report_leak_max
+DRMEMORY+= -1
+DRMEMORY+= -batch
+
+default: res/egl_headers bin/eglproxy.dll res/globox bin/$(NAME)
+
+bin/$(NAME): $(OBJ) $(OBJ_EXTRA)
+	mkdir -p $(@D)
+	$(CC) -Febin/$(NAME).exe $^ -link -ENTRY:mainCRTStartup $(LDFLAGS) $(LDLIBS)
+
+bin/eglproxy.dll: res/eglproxy
+	mkdir -p $(@D)
+	cp res/eglproxy/lib/msvc/eglproxy.dll $@
+
+res/eglproxy:
+	make/scripts/eglproxy_get.sh
+
+res/egl_headers:
+	make/scripts/egl_get.sh
+
+res/globox:
+	make/scripts/globox_get.sh
+
+run: bin/$(NAME)
+	cd bin && $(CMD)
+
+leak: bin/$(NAME).exe
+	cd bin && drmemory.exe $(DRMEMORY) 2> ../drmemory.log $(CMD)
+	less drmemory.log
+
+.SUFFIXES: .c .obj
+.c.obj:
+	$(CC) $(CFLAGS) -Fo$@ -c $<
+
+willis.o: res/willis/src/willis.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h
+debug.o: res/willis/src/debug.c
+windows.o: res/willis/src/windows.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h
+spng.o: res/libspng/spng/spng.c res/libspng/spng/spng.h
+egl.o: example/egl.c globox.h globox_private_getters.h willis.h spng.h
+
+clean:
+	make/scripts/clean.sh

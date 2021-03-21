@@ -1,0 +1,85 @@
+.POSIX:
+NAME = example_x11_egl
+CMD = ./example_x11_egl
+CC = gcc
+
+
+LDLIBS+= -lxcb-cursor
+LDLIBS+= -lxcb-randr
+LDLIBS+= -lxcb-xfixes
+LDLIBS+= -lxcb-xinput
+LDLIBS+= -lxcb-xkb
+LDLIBS+= -lxcb-xrm
+LDLIBS+= -lxcb
+LDLIBS+= -lxkbcommon-x11
+LDLIBS+= -lxkbcommon
+LDLIBS+= -lEGL
+LDLIBS+= -lGLESv2
+LDLIBS+= -lm
+LDLIBS+= -lz
+
+CFLAGS+= -std=c99
+CFLAGS+= -pedantic
+CFLAGS+= -Wall
+CFLAGS+= -Wextra
+CFLAGS+= -Werror=vla
+CFLAGS+= -Werror
+CFLAGS+= -Wno-address-of-packed-member
+CFLAGS+= -Wno-unused-parameter
+CFLAGS+= -Ires/globox/include
+CFLAGS+= -Ires/willis/src
+CFLAGS+= -Ires/libspng/spng
+
+CFLAGS+= -DGLOBOX_PLATFORM_X11
+CFLAGS+= -DWILLIS_X11
+CFLAGS+= -DWILLIS_DEBUG
+CFLAGS+= -DGLOBOX_CONTEXT_EGL
+
+OBJ+= res/willis/src/willis.o
+OBJ+= res/willis/src/debug.o
+OBJ+= res/willis/src/x11.o
+OBJ+= res/willis/src/xkb.o
+OBJ+= res/libspng/spng/spng.o
+OBJ+= example/egl.o
+
+OBJ_EXTRA+= res/globox/lib/globox/x11/globox_x11_egl.a
+
+VALGRIND+= --show-error-list=yes
+VALGRIND+= --show-leak-kinds=all
+VALGRIND+= --track-origins=yes
+VALGRIND+= --leak-check=full
+VALGRIND+= --suppressions=../res/valgrind.supp
+
+default: res/globox bin/$(NAME)
+
+bin/$(NAME): $(OBJ) $(OBJ_EXTRA)
+	mkdir -p $(@D)
+	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+res/globox:
+	make/scripts/globox_get.sh
+
+res/wayland_headers:
+	make/scripts/wayland_get.sh
+
+leak: bin/$(NAME)
+	cd bin && valgrind $(VALGRIND) 2> ../valgrind.log $(CMD)
+	less valgrind.log
+
+run: bin/$(NAME)
+	cd bin && $(CMD)
+
+willis.o: res/willis/src/willis.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h
+debug.o: res/willis/src/debug.c
+x11.o: res/willis/src/x11.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h res/willis/src/willis_x11.h \
+ res/willis/src/willis_xkb.h res/willis/src/xkb.h
+xkb.o: res/willis/src/xkb.c res/willis/src/willis.h \
+ res/willis/src/willis_events.h res/willis/src/willis_xkb.h \
+ res/willis/src/xkb.h
+spng.o: res/libspng/spng/spng.c res/libspng/spng/spng.h
+egl.o: example/egl.c globox.h globox_private_getters.h willis.h spng.h
+
+clean:
+	make/scripts/clean.sh

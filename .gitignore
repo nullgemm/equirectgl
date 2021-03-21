@@ -1,0 +1,11 @@
+bin
+*.o
+res/angle
+res/globox
+res/libspng
+res/eglproxy
+res/egl_headers
+res/wayland_headers
+valgrind.log
+drmemory.log
+.gitmodules

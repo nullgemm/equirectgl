@@ -8,4 +8,3 @@ res/egl_headers
 res/wayland_headers
 valgrind.log
 drmemory.log
-.gitmodules
